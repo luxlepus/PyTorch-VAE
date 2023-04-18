@@ -9,7 +9,35 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.datasets import CelebA
 import zipfile
+import sqlite3
 
+class BunkerSensors(Dataset):
+    def __init__(self):
+        self.db_file = '../EnSort/ensort.db'
+        self.tables = []
+
+        con = sqlite3.connect(self.db_file)
+        cur = con.execute("SELECT name FROM sqlite_master WHERE type='table';")
+
+        for table in cur:
+            if "Bunkersensoren" in table[0]:
+                self.tables.append(table[0])
+
+        self.num_data = 10e6
+
+        for table in self.tables:
+            cur = con.execute("SELECT COUNT(*) FROM " + table)
+            num = cur.fetchone()[0]
+            if num < self.num_data:
+                self.num_data = num
+
+        con.close()
+
+    def __len__(self):
+        return self.num_data
+
+    def __getitem__(self, idx):
+        pass
 
 # Add your custom dataset class here
 class MyDataset(Dataset):
@@ -130,19 +158,19 @@ class VAEDataset(LightningDataModule):
                                               transforms.CenterCrop(148),
                                               transforms.Resize(self.patch_size),
                                               transforms.ToTensor(),])
-        
+
         val_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
                                             transforms.CenterCrop(148),
                                             transforms.Resize(self.patch_size),
                                             transforms.ToTensor(),])
-        
+
         self.train_dataset = MyCelebA(
             self.data_dir,
             split='train',
             transform=train_transforms,
             download=False,
         )
-        
+
         # Replace CelebA with your dataset
         self.val_dataset = MyCelebA(
             self.data_dir,
